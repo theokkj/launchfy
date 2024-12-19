@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const { createClient } = require("@supabase/supabase-js");
+// Se necessário:
+// const fetch = require('node-fetch'); // caso esteja usando Node 16 ou inferior.
+// No Node 18+ já existe fetch nativo.
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -8,37 +11,19 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 router.post("/", (req, res) => {
   const { lead_id, shortcode, timestamp, user_agent } = req.body;
-  const browserId = lead_id;
+  const browserId = lead_id; // O lead_id vindo do front é o browserId (UUID)
 
-  // Responde imediatamente para não atrasar o redirecionamento do usuário
+  // Obtém o IP do usuário a partir do cabeçalho
+  const userIpRaw = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+  // userIpRaw pode conter algo como '10.0.0.1, 138.121.198.195', pegue o primeiro IP real
+  const userIp = userIpRaw.split(",")[0].trim();
+
+  // Responde imediatamente
   res.status(200).json({ status: "ok" });
 
   (async () => {
     try {
-      // Obtém o IP do cliente
-      // Em ambientes por trás de proxies, pode usar req.headers['x-forwarded-for']
-      // e pegar o primeiro IP da lista. Caso contrário, req.ip pode funcionar.
-      const clientIp = req.headers["x-forwarded-for"]
-        ? req.headers["x-forwarded-for"].split(",")[0].trim()
-        : req.ip;
-
-      // Chamando a API ipapi para obter geodados do IP
-      let ipData = {};
-      try {
-        const response = await fetch(`https://ipapi.co/${clientIp}/json/`);
-        if (response.ok) {
-          ipData = await response.json();
-        } else {
-          console.error(
-            "Falha ao obter dados de IP da ipapi:",
-            await response.text()
-          );
-        }
-      } catch (err) {
-        console.error("Erro ao chamar a ipapi:", err);
-      }
-
-      // Lógica para verificar/criar lead e browser (conforme já implementado anteriormente)
+      // Verifica se o browser já existe
       const { data: existingBrowser, error: browserSelectError } =
         await supabase
           .from("browsers")
@@ -69,7 +54,7 @@ router.post("/", (req, res) => {
 
         currentLeadId = newLead.id;
 
-        // Cria o novo browser associado ao lead
+        // Cria o novo browser
         const { data: insertedBrowser, error: insertBrowserError } =
           await supabase
             .from("browsers")
@@ -105,7 +90,7 @@ router.post("/", (req, res) => {
         );
       }
 
-      // Obter o trackpage_id a partir do shortcode
+      // Obter trackpage_id a partir do shortcode
       const { data: trackpageData, error: trackpageError } = await supabase
         .from("trackpages")
         .select("id")
@@ -123,19 +108,24 @@ router.post("/", (req, res) => {
 
       const trackpageId = trackpageData.id;
 
-      // Monta o JSON com os dados de geolocalização obtidos
+      // Chama a API do geojs.io para obter dados de geolocalização
+      const geoResponse = await fetch(
+        `https://get.geojs.io/v1/ip/geo/${userIp}.json`
+      );
+      let geoData = {};
+      if (geoResponse.ok) {
+        geoData = await geoResponse.json();
+      }
+
       const eventData = {
         browser_id: currentBrowserId,
         trackpage_id: trackpageId,
-        ip: ipData.ip || clientIp, // garante ao menos registrar o IP real
-        adress_city: ipData.city || null,
-        adress_country: ipData.country || null,
-        adress_country_name: ipData.country_name || null,
-        adress_state: ipData.region || null,
-        adress_zipcode: ipData.postal || null,
+        country: geoData.country || null,
+        city: geoData.city || null,
+        timezone: geoData.timezone || null,
+        ip: userIp,
       };
 
-      // Insere o evento
       const { error: eventInsertError } = await supabase.from("events").insert([
         {
           lead_id: currentLeadId,
@@ -145,7 +135,14 @@ router.post("/", (req, res) => {
 
       if (eventInsertError) {
         console.error("Erro ao inserir evento:", eventInsertError);
-        return;
+      } else {
+        console.log(
+          "Evento registrado com sucesso para lead_id:",
+          currentLeadId,
+          "trackpage_id:",
+          trackpageId,
+          "com geo-data."
+        );
       }
 
       console.log(
@@ -153,7 +150,6 @@ router.post("/", (req, res) => {
           timestamp
         ).toISOString()} ua=${user_agent}`
       );
-      console.log("Evento registrado com IP e localização.");
     } catch (err) {
       console.error("Erro inesperado no processamento assíncrono:", err);
     }
