@@ -1,9 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const { createClient } = require("@supabase/supabase-js");
-// Se necessário:
-// const fetch = require('node-fetch'); // caso esteja usando Node 16 ou inferior.
-// No Node 18+ já existe fetch nativo.
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -11,14 +8,11 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 router.post("/", (req, res) => {
   const { lead_id, shortcode, timestamp, user_agent } = req.body;
-  const browserId = lead_id; // O lead_id vindo do front é o browserId (UUID)
+  const browserId = lead_id;
 
-  // Obtém o IP do usuário a partir do cabeçalho
   const userIpRaw = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-  // userIpRaw pode conter algo como '10.0.0.1, 138.121.198.195', pegue o primeiro IP real
   const userIp = userIpRaw.split(",")[0].trim();
 
-  // Responde imediatamente
   res.status(200).json({ status: "ok" });
 
   (async () => {
@@ -90,7 +84,7 @@ router.post("/", (req, res) => {
         );
       }
 
-      // Obter trackpage_id a partir do shortcode
+      // Obter trackpage_id
       const { data: trackpageData, error: trackpageError } = await supabase
         .from("trackpages")
         .select("id")
@@ -123,7 +117,6 @@ router.post("/", (req, res) => {
         country: geoData.country || null,
         city: geoData.city || null,
         timezone: geoData.timezone || null,
-        ip: userIp,
       };
 
       const { error: eventInsertError } = await supabase.from("events").insert([
@@ -140,8 +133,7 @@ router.post("/", (req, res) => {
           "Evento registrado com sucesso para lead_id:",
           currentLeadId,
           "trackpage_id:",
-          trackpageId,
-          "com geo-data."
+          trackpageId
         );
       }
 
@@ -150,6 +142,21 @@ router.post("/", (req, res) => {
           timestamp
         ).toISOString()} ua=${user_agent}`
       );
+
+      // Atualiza o IP do lead na tabela leads
+      const { error: leadUpdateError } = await supabase
+        .from("leads")
+        .update({ currentIPAddress: userIp })
+        .eq("id", currentLeadId);
+
+      if (leadUpdateError) {
+        console.error(
+          "Erro ao atualizar currentIPAddress do lead:",
+          leadUpdateError
+        );
+      } else {
+        console.log(`Lead ${currentLeadId} atualizado com IP ${userIp}.`);
+      }
     } catch (err) {
       console.error("Erro inesperado no processamento assíncrono:", err);
     }
