@@ -15,25 +15,50 @@ router.post("/", (req, res) => {
 
   (async () => {
     try {
-      // Verifica se já existe um browser com esse browserId
-      const { data: existingBrowser, error: selectError } = await supabase
-        .from("browsers")
-        .select("id, lead_id")
-        .eq("browserId", browserId)
-        .maybeSingle();
+      // Obtém o IP do cliente
+      // Em ambientes por trás de proxies, pode usar req.headers['x-forwarded-for']
+      // e pegar o primeiro IP da lista. Caso contrário, req.ip pode funcionar.
+      const clientIp = req.headers["x-forwarded-for"]
+        ? req.headers["x-forwarded-for"].split(",")[0].trim()
+        : req.ip;
 
-      if (selectError) {
-        console.error("Erro ao consultar browserId:", selectError);
+      // Chamando a API ipapi para obter geodados do IP
+      let ipData = {};
+      try {
+        const response = await fetch(`https://ipapi.co/${clientIp}/json/`);
+        if (response.ok) {
+          ipData = await response.json();
+        } else {
+          console.error(
+            "Falha ao obter dados de IP da ipapi:",
+            await response.text()
+          );
+        }
+      } catch (err) {
+        console.error("Erro ao chamar a ipapi:", err);
+      }
+
+      // Lógica para verificar/criar lead e browser (conforme já implementado anteriormente)
+      const { data: existingBrowser, error: browserSelectError } =
+        await supabase
+          .from("browsers")
+          .select("id, lead_id")
+          .eq("browserId", browserId)
+          .maybeSingle();
+
+      if (browserSelectError) {
+        console.error("Erro ao consultar browserId:", browserSelectError);
         return;
       }
 
-      if (!existingBrowser) {
-        // Não existe um browser com esse ID. Precisamos criar um novo lead e depois o browser.
+      let currentBrowserId;
+      let currentLeadId;
 
+      if (!existingBrowser) {
         // Cria um novo lead
         const { data: newLead, error: leadError } = await supabase
           .from("leads")
-          .insert([{ profile: {} }]) // Aqui você pode inserir um profile vazio ou algum dado default.
+          .insert([{ profile: {} }])
           .select("id")
           .single();
 
@@ -42,9 +67,9 @@ router.post("/", (req, res) => {
           return;
         }
 
-        const newLeadId = newLead.id;
+        currentLeadId = newLead.id;
 
-        // Agora cria o novo browser associado ao lead
+        // Cria o novo browser associado ao lead
         const { data: insertedBrowser, error: insertBrowserError } =
           await supabase
             .from("browsers")
@@ -53,10 +78,10 @@ router.post("/", (req, res) => {
                 browserId: browserId,
                 user_agent: user_agent,
                 created_at: new Date().toISOString(),
-                lead_id: newLeadId,
+                lead_id: currentLeadId,
               },
             ])
-            .select("*")
+            .select("id, lead_id")
             .single();
 
         if (insertBrowserError) {
@@ -64,16 +89,63 @@ router.post("/", (req, res) => {
           return;
         }
 
-        console.log("Novo lead criado com id:", newLeadId);
-        console.log("Novo browser registrado:", insertedBrowser.id);
+        currentBrowserId = insertedBrowser.id;
+        currentLeadId = insertedBrowser.lead_id;
+
+        console.log("Novo lead criado com id:", currentLeadId);
+        console.log("Novo browser registrado:", insertedBrowser);
       } else {
-        // Browser já existe, não precisamos criar um novo lead ou browser.
+        currentBrowserId = existingBrowser.id;
+        currentLeadId = existingBrowser.lead_id;
         console.log(
           "Browser já existente com browserId:",
           browserId,
           "e lead_id:",
-          existingBrowser.lead_id
+          currentLeadId
         );
+      }
+
+      // Obter o trackpage_id a partir do shortcode
+      const { data: trackpageData, error: trackpageError } = await supabase
+        .from("trackpages")
+        .select("id")
+        .eq("slug", shortcode)
+        .single();
+
+      if (trackpageError || !trackpageData) {
+        console.error(
+          "Trackpage não encontrada para o shortcode:",
+          shortcode,
+          trackpageError
+        );
+        return;
+      }
+
+      const trackpageId = trackpageData.id;
+
+      // Monta o JSON com os dados de geolocalização obtidos
+      const eventData = {
+        browser_id: currentBrowserId,
+        trackpage_id: trackpageId,
+        ip: ipData.ip || clientIp, // garante ao menos registrar o IP real
+        adress_city: ipData.city || null,
+        adress_country: ipData.country || null,
+        adress_country_name: ipData.country_name || null,
+        adress_state: ipData.region || null,
+        adress_zipcode: ipData.postal || null,
+      };
+
+      // Insere o evento
+      const { error: eventInsertError } = await supabase.from("events").insert([
+        {
+          lead_id: currentLeadId,
+          data: eventData,
+        },
+      ]);
+
+      if (eventInsertError) {
+        console.error("Erro ao inserir evento:", eventInsertError);
+        return;
       }
 
       console.log(
@@ -81,6 +153,7 @@ router.post("/", (req, res) => {
           timestamp
         ).toISOString()} ua=${user_agent}`
       );
+      console.log("Evento registrado com IP e localização.");
     } catch (err) {
       console.error("Erro inesperado no processamento assíncrono:", err);
     }
