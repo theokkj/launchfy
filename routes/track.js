@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const { createClient } = require("@supabase/supabase-js");
 
-// Inicializa o supabase
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -11,46 +10,70 @@ router.post("/", (req, res) => {
   const { lead_id, shortcode, timestamp, user_agent } = req.body;
   const browserId = lead_id;
 
-  // Envia a resposta imediatamente para não travar o redirecionamento do usuário
+  // Responde imediatamente para não atrasar o redirecionamento do usuário
   res.status(200).json({ status: "ok" });
 
-  // Agora, após responder, processamos assíncronamente no "background"
   (async () => {
     try {
       // Verifica se já existe um browser com esse browserId
       const { data: existingBrowser, error: selectError } = await supabase
         .from("browsers")
-        .select("*")
+        .select("id, lead_id")
         .eq("browserId", browserId)
         .maybeSingle();
 
       if (selectError) {
         console.error("Erro ao consultar browserId:", selectError);
-        return; // Aqui apenas registramos o erro e saímos
+        return;
       }
 
-      // Se não encontrou, insere novo browser
       if (!existingBrowser) {
-        const { data: insertedBrowser, error: insertError } = await supabase
-          .from("browsers")
-          .insert([
-            {
-              browserId: browserId,
-              user_agent: user_agent,
-              created_at: new Date().toISOString(),
-            },
-          ])
-          .select("*")
+        // Não existe um browser com esse ID. Precisamos criar um novo lead e depois o browser.
+
+        // Cria um novo lead
+        const { data: newLead, error: leadError } = await supabase
+          .from("leads")
+          .insert([{ profile: {} }]) // Aqui você pode inserir um profile vazio ou algum dado default.
+          .select("id")
           .single();
 
-        if (insertError) {
-          console.error("Erro ao inserir browser:", insertError);
+        if (leadError) {
+          console.error("Erro ao criar lead:", leadError);
           return;
         }
 
-        console.log("Novo browser registrado:", insertedBrowser);
+        const newLeadId = newLead.id;
+
+        // Agora cria o novo browser associado ao lead
+        const { data: insertedBrowser, error: insertBrowserError } =
+          await supabase
+            .from("browsers")
+            .insert([
+              {
+                browserId: browserId,
+                user_agent: user_agent,
+                created_at: new Date().toISOString(),
+                lead_id: newLeadId,
+              },
+            ])
+            .select("*")
+            .single();
+
+        if (insertBrowserError) {
+          console.error("Erro ao inserir browser:", insertBrowserError);
+          return;
+        }
+
+        console.log("Novo lead criado com id:", newLeadId);
+        console.log("Novo browser registrado:", insertedBrowser.id);
       } else {
-        console.log("Browser já existente com browserId:", browserId);
+        // Browser já existe, não precisamos criar um novo lead ou browser.
+        console.log(
+          "Browser já existente com browserId:",
+          browserId,
+          "e lead_id:",
+          existingBrowser.lead_id
+        );
       }
 
       console.log(
