@@ -1,22 +1,26 @@
 const express = require('express');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { createClient } = require('@supabase/supabase-js');
+
+// Inicializa o supabase (caso já esteja usando)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const app = express();
-app.use(express.json())
+app.use(express.json());
 
-// Servir arquivos estáticos da pasta "public"
+// Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Dicionário em memória com shortcodes e URLs finais (exemplo)
-const shortLinks = {
-  'abc123': 'https://exemplo.com',
-  'teste': 'https://www.google.com',
-  "bebem": "https://youtube.com"
-};
+// Importa o router de tracking
+const trackRouter = require('./routes/track');
 
-// Página HTML de redirecionamento sem inline script
-// Usamos um elemento <div id="redirect-info"> com data attributes.
+// Monta a rota /api/v1/track usando o router importado
+app.use('/api/v1/track', trackRouter);
+
+// Função para gerar o HTML de redirecionamento sem inline script
 function generateRedirectHTML(finalUrl, shortcode) {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -35,26 +39,26 @@ function generateRedirectHTML(finalUrl, shortcode) {
 </html>`;
 }
 
-// Rota que serve a página de redirecionamento
-app.get('/:shortcode', (req, res) => {
+// Rota para servir a página de redirecionamento
+app.get('/:shortcode', async (req, res) => {
   const { shortcode } = req.params;
-  const finalUrl = shortLinks[shortcode];
-  if (!finalUrl) {
+
+  const { data, error } = await supabase
+    .from('trackpages')
+    .select('redirectTo')
+    .eq('slug', shortcode)
+    .single();
+
+  if (error || !data) {
     return res.status(404).send('Shortcode não encontrado');
   }
+
+  const finalUrl = data.redirectTo;
 
   res.set('Content-Type', 'text/html; charset=UTF-8');
   res.send(generateRedirectHTML(finalUrl, shortcode));
 });
 
-// Rota de tracking
-app.post('/api/v1/track', (req, res) => {
-  const { lead_id, shortcode, timestamp, user_agent } = req.body;
-  console.log(`[TRACK] lead_id=${lead_id} shortcode=${shortcode} time=${new Date(timestamp).toISOString()} ua=${user_agent}`);
-  res.status(200).json({ status: 'ok' });
-});
-
-// Inicializa o servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
