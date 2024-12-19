@@ -11,7 +11,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Dicionário em memória com shortcodes e URLs finais (exemplo)
 const shortLinks = {
   'abc123': 'https://exemplo.com',
-  'teste': 'https://www.google.com'
+  'teste': 'https://www.google.com',
+  "bebem": "https://youtube.com"
 };
 
 // Página HTML de redirecionamento sem inline script
