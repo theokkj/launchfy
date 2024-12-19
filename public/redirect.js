@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("load", () => {
   // Código do tracking
   const infoEl = document.getElementById("redirect-info");
   const finalUrl = infoEl.dataset.finalUrl;
