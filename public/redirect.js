@@ -10,7 +10,7 @@ window.addEventListener("load", () => {
     localStorage.setItem("browser_Id", browserId);
   }
 
-  fetch("/api/v1/track", {
+  fetch("/api/v1/trackpage", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
