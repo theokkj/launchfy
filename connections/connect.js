@@ -24,7 +24,7 @@ async function _createLead(profileData) {
     .from("leads")
     .insert([{ profile: profileData }])
     .select("id")
-    .single();
+    .maybeSingle();
 
   if (leadError) {
     console.error("Erro ao criar lead:", leadError);
@@ -70,7 +70,7 @@ async function _getBrowserSupabaseId(browserId) {
   return !!existingBrowser ? existingBrowser : null;
 }
 
-async function _createBrowser(browserId, currentLeadId) {
+async function _createBrowser(browserId, currentLeadId, eventSchemaData) {
   // Cria o novo browser
   const { data: newBrowser, error: insertBrowserError } = await supabase
     .from("browsers")
@@ -107,7 +107,8 @@ async function _getLeadFromBrowserId(eventSchemaData) {
 
       currentBrowserSupabaseId = await _createBrowser(
         browserLocalId,
-        currentLeadId
+        currentLeadId,
+        eventSchemaData
       );
       if (!currentBrowserSupabaseId) return;
     }
@@ -184,7 +185,7 @@ module.exports = async function connect({ eventData, eventType }) {
   console.log(
     `
     [EVENT] 
-    SLUG=${eventSchemaData.slug} 
+    SLUG=${eventData.slug} 
     LEAD_ID=${currentLeadId} 
     EVENT_ID=${currentEventSupabase["id"]}`
   );
