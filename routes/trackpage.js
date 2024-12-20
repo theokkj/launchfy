@@ -63,7 +63,7 @@ router.post("/", (req, res) => {
     const leadIp = getLeadIPAddress(req);
 
     // Pega Geo Data
-    const geoData = getGeolocationData(leadIp);
+    const geoData = await getGeolocationData(leadIp);
 
     const eventSchemaData = {
       profileData: {
