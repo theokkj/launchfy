@@ -65,22 +65,21 @@ router.post("/", (req, res) => {
     // Pega Geo Data
     const geoData = await getGeolocationData(leadIp);
 
-    const eventSchemaData = {
-      profileData: {
-        browser_id: browser_id,
-        ipAddress: leadIp,
-      },
-      eventData: {
-        city: geoData.city || null,
-        country: geoData.country || null,
-        timezone: geoData.timezone || null,
-        trackpage_id: trackpageId,
-        user_agent: user_agent || null,
-        slug: shortcode,
-      },
+    const eventData = {
+      browser_id: browser_id,
+      ipAddress: leadIp,
+      city: geoData.city || null,
+      country: geoData.country || null,
+      timezone: geoData.timezone || null,
+      trackpage_id: trackpageId,
+      user_agent: user_agent || null,
+      slug: shortcode,
     };
 
-    await connect({ eventSchemaData: eventSchemaData, eventType: "trackpage" });
+    await connect({
+      eventData: eventData,
+      eventType: "trackpage",
+    });
   })();
 });
 

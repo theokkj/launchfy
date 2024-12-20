@@ -1,13 +1,9 @@
 const express = require("express");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
-require("dotenv").config();
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 const createCache = require("./utils/cache");
-const cache = createCache(supabaseUrl, supabaseAnonKey);
+const cache = createCache();
 
 const app = express();
 app.use(express.json());

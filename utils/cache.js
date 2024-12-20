@@ -1,6 +1,9 @@
 const { createClient } = require("@supabase/supabase-js");
 
-module.exports = function createCache(supabaseUrl, supabaseAnonKey) {
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+module.exports = function createCache() {
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
   const trackPagesCache = {};
 
@@ -18,7 +21,7 @@ module.exports = function createCache(supabaseUrl, supabaseAnonKey) {
       data.forEach((item) => {
         trackPagesCache[item.slug] = item.redirectTo;
       });
-      console.log(`Cache inicializado com ${data.length} trackpages.`);
+      console.log(`[CACHE IMPORTED]`);
     } else {
       console.log("Nenhuma trackpage encontrada no banco.");
     }
