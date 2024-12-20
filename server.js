@@ -15,7 +15,7 @@ app.use(express.json());
 // Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
 
-const trackRouter = require("./routes/track");
+const trackRouter = require("./routes/trackpage");
 app.use("/api/v1/track", trackRouter);
 
 // Importa e cria o router de shortcode

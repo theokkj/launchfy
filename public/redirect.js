@@ -4,17 +4,17 @@ window.addEventListener("load", () => {
   const finalUrl = infoEl.dataset.finalUrl;
   const shortcode = infoEl.dataset.shortcode;
 
-  let leadId = localStorage.getItem("lead_id");
-  if (!leadId) {
-    leadId = crypto.randomUUID();
-    localStorage.setItem("lead_id", leadId);
+  let browserId = localStorage.getItem("browser_Id");
+  if (!browserId) {
+    browserId = crypto.randomUUID();
+    localStorage.setItem("browser_Id", browserId);
   }
 
   fetch("/api/v1/track", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      lead_id: leadId,
+      browser_id: browserId,
       shortcode: shortcode,
       timestamp: Date.now(),
       user_agent: navigator.userAgent,

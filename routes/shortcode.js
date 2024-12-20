@@ -29,14 +29,15 @@ function generateRedirectHTML(finalUrl, shortcode) {
   <html lang="pt-BR">
   <head>
   <meta charset="UTF-8"/>
-  <title>Redirecionando...</title>
+  <link rel="stylesheet" href="/style.css">
+  <title>Carregando...</title>
   </head>
   <body>
   <div id="redirect-info"
     data-final-url="${finalUrl}"
     data-shortcode="${shortcode}">
   </div>
-  <p>Redirecionando...</p>
+  <p></p>
   <script src="/redirect.js" defer></script>
   </body>
   </html>`;
