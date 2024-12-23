@@ -86,10 +86,11 @@ router.post("/", (req, res) => {
       };
 
       console.log(`[TRACKPAGE.JS - INICIANDO CONNECT.JS]`);
-      await connectTrackpage({
+      const isSuccessful = await connectTrackpage({
         eventData: eventData,
         eventType: "trackpage",
       });
+    if(!isSuccessful) throw new Error()
       console.log(`[TRACKPAGE.JS - SUCESSO!]`);
       console.log(`-------------------------------------`);
     })();

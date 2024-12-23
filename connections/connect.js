@@ -1,11 +1,11 @@
-const { createClient } = require("@supabase/supabase-js");
+const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Import schemas
-const importSchemas = require("../utils/schemas");
+const importSchemas = require('../utils/schemas');
 let eventsSchemas = [];
 let profileSchema = {};
 
@@ -22,29 +22,29 @@ async function _createLead(profileData) {
   console.log(`[CONNECT.JS - CRIANDO NOVO LEAD]`);
   // Cria um novo lead
   const { data: newLead, error: leadError } = await supabase
-    .from("leads")
+    .from('leads')
     .insert({})
-    .select("id")
+    .select('id')
     .maybeSingle();
 
   if (leadError || !newLead) {
     console.error(JSON.stringify(leadError));
     throw new Error(
-      "[CONNECT.JS - FALHOU] Erro ao criar lead:",
+      '[CONNECT.JS - FALHOU] Erro ao criar lead:',
       leadError.message
     );
   }
 
   // Cria um novo leadProfile
   const { data: newProfile, error: profileError } = await supabase
-    .from("leadProfiles")
+    .from('leadProfiles')
     .insert([{ profile: profileData, lead_id: newLead.id }])
-    .select("id")
+    .select('id')
     .maybeSingle();
 
   if (profileError || !newProfile) {
     throw new Error(
-      "[CONNECT.JS - FALHOU] Erro ao criar profile do lead:",
+      '[CONNECT.JS - FALHOU] Erro ao criar profile do lead:',
       profileError.message
     );
   }
@@ -56,7 +56,7 @@ async function _createLead(profileData) {
 async function _createEvent(leadId, eventSchemaData, eventSchemaId) {
   console.log(`[CONNECT.JS - CRIANDO NOVO EVENTO]`);
   const { data: eventInsertData, error: eventInsertError } = await supabase
-    .from("events")
+    .from('events')
     .insert([
       {
         lead_id: leadId,
@@ -64,12 +64,12 @@ async function _createEvent(leadId, eventSchemaData, eventSchemaId) {
         eventSchema_id: eventSchemaId,
       },
     ])
-    .select("id")
+    .select('id')
     .single();
 
   if (eventInsertError || !eventInsertData) {
     throw new Error(
-      "[CONNECT.JS - FALHOU] Erro ao inserir evento:",
+      '[CONNECT.JS - FALHOU] Erro ao inserir evento:',
       eventInsertError.message
     );
   }
@@ -79,9 +79,9 @@ async function _createEvent(leadId, eventSchemaData, eventSchemaId) {
 }
 
 function _findCurrentEventSchema({ eventType, eventSchemaId }) {
-  if (eventType == "trackpage") {
+  if (eventType == 'trackpage') {
     console.log(`[CONNECT.JS - EVENT SCHEMA IDENTIFICADO]`);
-    return eventsSchemas.find((schema) => schema.type === "trackpage");
+    return eventsSchemas.find((schema) => schema.type === 'trackpage');
   } else if (!!eventSchemaId) {
     console.log(`[CONNECT.JS - EVENT SCHEMA IDENTIFICADO]`);
     return eventsSchemas.find((schema) => schema.id === eventSchemaId);
@@ -120,7 +120,7 @@ function _findIdFields({ profileSchema, profileData }) {
   // Itera pelas chaves do objeto profileData
   for (const key in profileData) {
     // Verifica se o valor não é nulo e se o schema define o campo como "id"
-    if (profileData[key] !== null && profileSchema[key] === "id") {
+    if (profileData[key] !== null && profileSchema[key] === 'id') {
       result.push({ key, value: profileData[key] }); // Adiciona a propriedade na lista
     }
   }
@@ -134,8 +134,8 @@ function _transformIdFieldsInQuery(idFields) {
   // Função para sanitizar os valores do input
   function sanitizeValue(val) {
     // Remove caracteres problemáticos ou retorna erro
-    if (val.includes(",") || val.includes(")")) {
-      throw new Error("Invalid characters in value");
+    if (val.includes(',') || val.includes(')')) {
+      throw new Error('Invalid characters in value');
     }
     return val.trim();
   }
@@ -147,7 +147,7 @@ function _transformIdFieldsInQuery(idFields) {
   });
 
   // Junta todas as condições com vírgula
-  const orQuery = orConditions.join(",");
+  const orQuery = orConditions.join(',');
 
   return orQuery;
 }
@@ -157,13 +157,13 @@ async function _getProfilesByIdFields(idFields) {
   const query = _transformIdFieldsInQuery(idFields);
 
   let { data: profilesByQuery, error } = await supabase
-    .from("leadProfiles")
-    .select("*")
+    .from('leadProfiles')
+    .select('*')
     .or(query);
 
   if (error) {
     throw new Error(
-      "[CONNECT.JS - FALHOU] Erro ao buscar profiles:",
+      '[CONNECT.JS - FALHOU] Erro ao buscar profiles:',
       error.message
     );
   }
@@ -175,22 +175,20 @@ async function _getProfilesByIdFields(idFields) {
   if (profilesByQuery.length == 0) return { profiles: [], leadIds: [] };
 
   console.log(
-    `[CONNECT.JS - PROCURANDO DEMAIS PROFILES BASEADO NOS PROFILES IDENTIFICADOS]`
+    `[CONNECT.JS - PROCURANDO DEMAIS PROFILES DOS LEADS IDENTIFICADOS]`
   );
 
-  const leadIds = profilesByQuery.map((profileData) => profileData["lead_id"]);
+  const leadIds = profilesByQuery.map((profileData) => profileData['lead_id']);
   const uniqueLeadIds = [...new Set(leadIds)];
 
-  console.log(`[CONNECT.JS - BUSCANDO PROFILES EXTRAS DO MESMO LEAD]`);
-
   let { data: profiles, error2 } = await supabase
-    .from("leadProfiles")
-    .select("*")
-    .in("lead_id", uniqueLeadIds);
+    .from('leadProfiles')
+    .select('*')
+    .in('lead_id', uniqueLeadIds);
 
   if (error2 || !profiles || profiles.length == 0) {
     throw new Error(
-      "[CONNECT.JS - FALHOU] Erro ao buscar leads:",
+      '[CONNECT.JS - FALHOU] Erro ao buscar leads:',
       error2.message
     );
   }
@@ -240,7 +238,7 @@ function _analyseProfileConflict(leadProfile, eventProfileData, idFields) {
 
 async function _updateLeadProfiles({
   leadProfiles,
-  eventSchemaData,
+  eventProfileData,
   idFields,
   leadId,
 }) {
@@ -249,13 +247,13 @@ async function _updateLeadProfiles({
   console.log(`[CONNECT.JS - ID FIELDS: ${JSON.stringify(idFields)}]`);
 
   const orderedProfiles = leadProfiles.sort((a, b) => a.id - b.id);
-  const eventProfileData = eventSchemaData.profileData;
+  const updatedProfiles = [];
 
   let classifiedCase3fields = eventProfileData;
 
   console.log(`[CONNECT.JS - INICIANDO LOOP DE ANÁLISE DE PROFILE CONFLICT]`);
   for (let profileIdx = 0; profileIdx < orderedProfiles.length; profileIdx++) {
-    console.log(`[CONNECT.JS - ANALISANDO ${profileIdx}º PROFILE]`);
+    console.log(`[CONNECT.JS - ANALISANDO ${profileIdx + 1}º PROFILE]`);
     currentProfile = orderedProfiles[profileIdx].profile;
 
     const classifiedEventFields = _analyseProfileConflict(
@@ -285,9 +283,9 @@ async function _updateLeadProfiles({
       console.log(`[CONNECT.JS - ATUALIZANDO PROFILE]`);
       // Atualiza profile atual no Supabase
       let { error } = await supabase
-        .from("leadProfiles")
+        .from('leadProfiles')
         .update({ profile: profileAfterAnalysis })
-        .eq("id", orderedProfiles[profileIdx].id);
+        .eq('id', orderedProfiles[profileIdx].id);
 
       if (error) {
         throw new Error(
@@ -305,8 +303,10 @@ async function _updateLeadProfiles({
       )} FIELDS DO CASO 3 RESTANTES]`
     );
 
-    // Se todos os campos foram resolvidos, pare o loop
-    if (Object.keys(classifiedCase3fields).length == 0) break;
+    updatedProfiles.push({
+      profile: profileAfterAnalysis,
+      id: orderedProfiles[profileIdx].id,
+    });
   }
 
   // Se ainda existirem campos conflituosos após as análises
@@ -317,23 +317,191 @@ async function _updateLeadProfiles({
     );
 
     // Cria um novo leadProfile
-    const { error: profileError } = await supabase
-      .from("leadProfiles")
-      .insert({ profile: classifiedCase3fields, lead_id: leadId });
+    const { data, error: profileError } = await supabase
+      .from('leadProfiles')
+      .insert({ profile: classifiedCase3fields, lead_id: leadId })
+      .select('id, profile')
+      .maybeSingle();
 
     if (profileError) {
       throw new Error(
-        "[CONNECT.JS - FALHOU] Erro ao criar profile:",
+        '[CONNECT.JS - FALHOU] Erro ao criar profile:',
         profileError.message
       );
     }
 
+    updatedProfiles.push(data);
     console.log(`[CONNECT.JS - NOVO PROFILE CRIADO COM SUCESSO]`);
   }
 
   console.log(`[CONNECT.JS - PROFILES ATUALIZADOS COM SUCESSO]`);
 
-  return;
+  return updatedProfiles;
+}
+
+async function _unifyLeads({
+  leadsProfiles,
+  idFields,
+  leadIds,
+  eventSchemaData,
+}) {
+  console.log(`[CONNECT.JS - INICIANDO PROCESSO DE UNIFICAÇÃO DE LEADS]`);
+
+  // Agrupar os dados por leadId e organizar os profiles
+  const eachLeadProfiles = (() => {
+    const groupedLeads = leadsProfiles.reduce((result, row) => {
+      const existingLead = result.find((lead) => lead.id === row.lead_id);
+      const profile = { id: row.id, profile: row.profile };
+
+      if (existingLead) {
+        existingLead.profiles.push(profile);
+      } else {
+        result.push({ id: row.lead_id, profiles: [profile] });
+      }
+
+      return result;
+    }, []);
+
+    // Ordenar os leads e seus profiles
+    groupedLeads
+      .sort((a, b) => a.leadId - b.leadId)
+      .forEach((lead) => {
+        lead.profiles.sort((a, b) => a.id - b.id);
+      });
+
+    return groupedLeads;
+  })();
+
+  console.log(`[CONNECT.JS - LEADS E PROFILES ORGANIZADOS COM SUCESSO]`);
+
+  console.log(
+    `[CONNECT.JS - LEAD ID ${eachLeadProfiles[0].id} ALVO PARA MERGE]`
+  );
+
+  console.log(`LOG: ${JSON.stringify(eachLeadProfiles)}`);
+
+  // O primeiro lead ordenado por id do menor ao maior é o escolhido para ser aquele onde todos os outros leads se juntarão
+  let leadToMerge = eachLeadProfiles[0];
+
+  // Lista de leadIds que serão mergeados no lead alvo
+  const leadsMerged = leadIds.filter((item) => item !== leadToMerge.id);
+
+  // Juntar todos os perfis em um só começando a partir do segundo lead, já que o primeiro será o alvo para juntar
+  for (let leadIdx = 1; leadIdx < eachLeadProfiles.length; leadIdx++) {
+    const currentLead = eachLeadProfiles[leadIdx];
+
+    // Para cada profile do lead atual
+    for (
+      let profileIdx = 0;
+      profileIdx < currentLead.profiles.length;
+      profileIdx++
+    ) {
+      const currentProfile = currentLead.profiles[profileIdx];
+      console.log(
+        `[CONNECT.JS - JUNTANDO COM LEAD ID ${currentLead.id} - PROFILE ID ${currentProfile.id}]`
+      );
+
+      const currentIdFields = _findIdFields({
+        profileSchema,
+        profileData: currentProfile.profile,
+      });
+
+      // Juntar perfis como se o perfil do lead atual fosse um evento
+      const updatedProfiles = await _updateLeadProfiles({
+        leadProfiles: leadToMerge.profiles,
+        eventProfileData: currentProfile.profile,
+        idFields: currentIdFields,
+        leadId: leadToMerge.id,
+      });
+
+      // Se na junção, um novo profile foi adicionado
+      eachLeadProfiles[0].profiles = updatedProfiles;
+      leadToMerge = eachLeadProfiles[0];
+
+      console.log(`LOG: ${JSON.stringify(eachLeadProfiles)}`);
+    }
+  }
+
+  console.log(`[CONNECT.JS - ATRIBUINDO EVENTSCHEMADATA AO LEAD UNIFICADO]`);
+
+  // Adicionar eventSchemaData ao perfil do lead alvo
+  await _updateLeadProfiles({
+    leadProfiles: leadToMerge.profiles,
+    eventProfileData: eventSchemaData.profileData,
+    idFields,
+    leadId: leadToMerge.id,
+  });
+
+  console.log(`LEAD TO MERGE ID ${leadToMerge.id}
+    LEADS MERGED ${leadsMerged}`);
+
+  console.log(`[CONNECT.JS - ATRIBUINDO EVENTS AO LEAD ALVO]`);
+
+  // Atribuir todos os eventos dos leads juntados ao lead alvo
+  const { error: eventMergeError } = await supabase
+    .from('events')
+    .update({ lead_id: leadToMerge.id })
+    .in('lead_id', leadsMerged);
+
+  if (eventMergeError) {
+    throw new Error(
+      `[CONNECT.JS - ERRO AO ATRIBUIR EVENTOS AO LEAD ALVO : ${eventMergeError}]`
+    );
+  }
+
+  console.log(`[CONNECT.JS - EVENTS ATRIBUIDOS COM SUCESSO]`);
+
+  console.log(`[CONNECT.JS - ATRIBUINDO BROWSERS AO LEAD ALVO]`);
+
+  // Atribuir todos os browsers dos leads juntados ao lead alvo
+  const { error: browserMergeError } = await supabase
+    .from('browsers')
+    .update({ lead_id: leadToMerge.id })
+    .in('lead_id', leadsMerged);
+
+  if (browserMergeError) {
+    throw new Error(
+      `[CONNECT.JS - ERRO AO ATRIBUIR BROWSERS AO LEAD ALVO : ${browserMergeError}]`
+    );
+  }
+
+  console.log(`[CONNECT.JS - BROWSERS ATRIBUIDOS COM SUCESSO]`);
+
+  console.log(`[CONNECT.JS - REMOVENDO PROFILES ANTIGOS DOS LEADS UNIFICADOS]`);
+
+  const { error: deleteProfilesError } = await supabase
+    .from('leadProfiles')
+    .delete()
+    .in('lead_id', leadsMerged);
+
+  if (deleteProfilesError) {
+    throw new Error(
+      `[CONNECT.JS - ERRO AO REMOVER PROFILES ANTIGOS DOS LEADS UNIFICADOS ${deleteProfilesError}]`
+    );
+  }
+
+  console.log(`[CONNECT.JS - PROFILES REMOVIDOS COM SUCESSO!]`);
+
+  console.log(`[CONNECT.JS - REMOVENDO LEADS UNIFICADOS DO BANCO]`);
+
+  const { error: deleteLeadsError } = await supabase
+    .from('leads')
+    .delete()
+    .in('id', leadsMerged);
+
+  if (deleteLeadsError) {
+    throw new Error(
+      `[CONNECT.JS - ERRO AO REMOVER LEADS UNIFICADOS DO BANCO ${deleteLeadsError}]`
+    );
+  }
+
+  console.log(`[CONNECT.JS - LEADS UNIFICADOS REMOVIDOS COM SUCESSO!]`);
+
+  console.log(
+    `[CONNECT.JS - ${leadsMerged.length} LEAD(S) FO(I)RAM UNIFICADO(S) COM SUCESSO]`
+  );
+
+  return leadToMerge.id;
 }
 
 // Connect Trackpage
@@ -344,14 +512,14 @@ async function connectTrackpage({ eventData }) {
       // Verifica se o browser já existe
       const { data: existingBrowser, error: browserSelectError } =
         await supabase
-          .from("browsers")
-          .select("id, lead_id")
-          .eq("browserId", browserId)
+          .from('browsers')
+          .select('id, lead_id')
+          .eq('browserId', browserId)
           .maybeSingle();
 
       if (browserSelectError) {
         throw new Error(
-          "[CONNECT.JS - FALHOU] Erro ao consultar browserId:",
+          '[CONNECT.JS - FALHOU] Erro ao consultar browserId:',
           browserSelectError.message
         );
       }
@@ -364,7 +532,7 @@ async function connectTrackpage({ eventData }) {
       console.log(`[CONNECT.JS - CRIANDO NOVO BROWSER]`);
       // Cria o novo browser
       const { data: newBrowser, error: insertBrowserError } = await supabase
-        .from("browsers")
+        .from('browsers')
         .insert([
           {
             browserId: browserId,
@@ -372,12 +540,12 @@ async function connectTrackpage({ eventData }) {
             lead_id: currentLeadId,
           },
         ])
-        .select("id, lead_id")
+        .select('id, lead_id')
         .single();
 
       if (insertBrowserError || !newBrowser) {
         throw new Error(
-          "[CONNECT.JS - FALHOU] Erro ao inserir browser:",
+          '[CONNECT.JS - FALHOU] Erro ao inserir browser:',
           insertBrowserError.message
         );
       }
@@ -406,15 +574,15 @@ async function connectTrackpage({ eventData }) {
       }
       // Se o browser já existe no supabase
       else {
-        currentBrowserSupabaseId = browserSupabase["id"];
-        currentLeadId = browserSupabase["lead_id"];
+        currentBrowserSupabaseId = browserSupabase['id'];
+        currentLeadId = browserSupabase['lead_id'];
       }
 
       console.log(`[CONNECT.JS - LEAD IDENTIFICADO]`);
       return currentLeadId;
     }
 
-    const eventType = "trackpage";
+    const eventType = 'trackpage';
 
     const currentEventSchema = _findCurrentEventSchema({ eventType });
     const eventSchemaData = _connectEventDataToEventSchema(
@@ -431,13 +599,15 @@ async function connectTrackpage({ eventData }) {
     );
   } catch (err) {
     console.error(err);
+    return false;
   }
+  return true;
 }
 
 // Connect Workflow
 async function connectWorkflow({ eventData, workflow }) {
   try {
-    const eventType = "workflow";
+    const eventType = 'workflow';
 
     const currentEventSchema = _findCurrentEventSchema({
       eventSchemaId: workflow.eventSchema_id,
@@ -453,9 +623,8 @@ async function connectWorkflow({ eventData, workflow }) {
       profileData: eventSchemaData.profileData,
     });
 
-    const { profiles: leadsProfiles, leadIds } = await _getProfilesByIdFields(
-      idFields
-    );
+    const { profiles: leadsProfiles, leadIds } =
+      await _getProfilesByIdFields(idFields);
 
     // Caso nenhum lead tenha sido encontrado
     if (leadIds.length == 0) {
@@ -464,7 +633,7 @@ async function connectWorkflow({ eventData, workflow }) {
       const currentLeadId = await _createLead(eventSchemaData.profileData);
 
       if (!currentLeadId) {
-        throw new Error("Não foi possível criar novo lead");
+        throw new Error('Não foi possível criar novo lead');
       }
 
       // Atribui evento ao lead
@@ -475,7 +644,7 @@ async function connectWorkflow({ eventData, workflow }) {
       );
 
       if (!currentEvent) {
-        throw new Error("Não foi possível criar novo evento");
+        throw new Error('Não foi possível criar novo evento');
       }
     }
     // Caso apenas 1 lead tenha sido encontrado
@@ -488,7 +657,7 @@ async function connectWorkflow({ eventData, workflow }) {
 
       await _updateLeadProfiles({
         leadProfiles: currentLeadProfiles,
-        eventSchemaData,
+        eventProfileData: eventSchemaData.profileData,
         idFields,
         leadId: currentLeadId,
       });
@@ -501,20 +670,40 @@ async function connectWorkflow({ eventData, workflow }) {
       );
 
       if (!currentEvent) {
-        throw new Error("Não foi possível criar novo evento");
+        throw new Error('Não foi possível criar novo evento');
       }
     }
     // Caso mais de 1 lead tenha sido encontrado
     else if (leadIds.length > 1) {
       console.log(
-        `[CONNECT.JS - ${leadIds.length} FORAM REFERENCIADOS PELO EVENTO]`
+        `[CONNECT.JS - ${leadIds.length} LEADS FORAM REFERENCIADOS PELO EVENTO]`
       );
-      // unifyLeads()
-      // attributeEvent()
+
+      // Unifica multiplos leads em 1
+      const unifiedLeadId = await _unifyLeads({
+        leadsProfiles,
+        idFields,
+        leadIds,
+        eventSchemaData,
+      });
+
+      // Atribui evento ao lead
+      const currentEvent = await _createEvent(
+        unifiedLeadId,
+        eventSchemaData,
+        workflow.eventSchema_id
+      );
+
+      if (!currentEvent) {
+        throw new Error('Não foi possível criar novo evento');
+      }
     }
   } catch (err) {
     console.error(err);
+    return false;
   }
+
+  return true;
 }
 
 module.exports = {

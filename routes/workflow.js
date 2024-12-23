@@ -46,7 +46,8 @@ router.post("/:webhookPath", async (req, res) => {
     const eventData = req.body;
 
     console.log(`[WORKFLOW.JS - INICIANDO CONNECT.JS]`);
-    await connectWorkflow({ eventData, workflow });
+    const isSuccessful = await connectWorkflow({ eventData, workflow });
+    if(!isSuccessful) throw new Error()
     console.log(`[WORKFLOW.JS - SUCESSO]`);
     console.log(`-------------------------------------`);
 
