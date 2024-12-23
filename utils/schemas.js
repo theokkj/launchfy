@@ -5,7 +5,7 @@ module.exports = async function importSchemas(supabaseUrl, supabaseAnonKey) {
 
   // Get event schemas
   let { data: eventsSchemas, error: eventError } = await supabase
-    .from("eventsSchema")
+    .from("eventsSchemas")
     .select("*");
   if (eventError) {
     console.error("Erro ao importar event schemas:", eventError);
@@ -14,7 +14,7 @@ module.exports = async function importSchemas(supabaseUrl, supabaseAnonKey) {
 
   // Get profile schema
   let { data: profileSchema, error: profileError } = await supabase
-    .from("profileSchema")
+    .from("profileSchemas")
     .select("*")
     .single();
 

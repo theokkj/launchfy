@@ -93,7 +93,7 @@ router.post("/", (req, res) => {
       console.log(`[TRACKPAGE.JS - SUCESSO!]`);
       console.log(`-------------------------------------`);
     })();
-  } catch (e) {
+  } catch (err) {
     console.error(
       "[TRACKPAGE.JS - FALHOU] Erro inesperado no processamento:",
       err
