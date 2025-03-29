@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Leitura de browser_Id via iframe</title>
+  </head>
+  <body>
+    <h1>ID do navegador:</h1>
+    <p id="browserIdDisplay">Carregando...</p>
+
+    <script>
+      const BRIDGE_ORIGIN = 'http://localhost:3000';
+      const BRIDGE_PATH = '/pixel';
+
+      let iframe;
+
+      window.addEventListener('message', (event) => {
+        console.log('[site] Mensagem recebida de', event.origin, event.data);
+        if (event.origin !== BRIDGE_ORIGIN) return;
+
+        const { command, browserId } = event.data;
+        if (command === 'BROWSER_ID_RESPONSE') {
+          document.getElementById('browserIdDisplay').textContent =
+            browserId || '(não definido)';
+        }
+      });
+
+      const readBrowserId = () => {
+        console.log('[site] Enviando READ_BROWSER_ID para o iframe');
+        iframe.contentWindow.postMessage(
+          { command: 'READ_BROWSER_ID' },
+          BRIDGE_ORIGIN
+        );
+      };
+
+      const initIframe = () => {
+        if (iframe) return;
+        iframe = document.createElement('iframe');
+        iframe.src = BRIDGE_ORIGIN + BRIDGE_PATH;
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+
+        iframe.onload = () => {
+          console.log('[site] iframe carregado, solicitando browserId');
+          readBrowserId();
+        };
+      };
+
+      window.addEventListener('load', () => {
+        initIframe();
+      });
+    </script>
+  </body>
+</html>

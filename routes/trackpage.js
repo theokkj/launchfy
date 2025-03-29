@@ -1,7 +1,7 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 
-const { createClient } = require("@supabase/supabase-js");
+const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -12,9 +12,9 @@ async function getTrackpageId(slug) {
 
   // Obter trackpage_id
   const { data: trackpageData, error: trackpageError } = await supabase
-    .from("trackpages")
-    .select("id")
-    .eq("slug", slug)
+    .from('trackpages')
+    .select('id')
+    .eq('slug', slug)
     .single();
 
   if (trackpageError || !trackpageData) {
@@ -30,8 +30,8 @@ async function getTrackpageId(slug) {
 }
 
 function getLeadIPAddress(req) {
-  const userIpRaw = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-  const userIp = userIpRaw.split(",")[0].trim();
+  const userIpRaw = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const userIp = userIpRaw.split(',')[0].trim();
 
   console.log(`[TRACKPAGE.JS - ENDEREÇO DE IP DO LEAD IDENTIFICADO]`);
   return userIp;
@@ -52,14 +52,14 @@ async function getGeolocationData(leadIp) {
   return geoData;
 }
 
-const { connectTrackpage } = require("../connections/connect.js");
+const { connectTrackpage } = require('../connections/connect.js');
 
-router.post("/", (req, res) => {
+router.post('/', (req, res) => {
   const { browser_id, shortcode, timestamp, user_agent } = req.body;
   console.log(`-------------------------------------`);
   console.log(`[TRACKPAGE.JS - RECEBIDO] SHORTCODE: ${shortcode}`);
 
-  res.status(200).json({ status: "ok" });
+  res.status(200).json({ status: 'ok' });
   console.log(`[TRACKPAGE.JS - STATUS 200 ENVIADO`);
 
   try {
@@ -88,18 +88,18 @@ router.post("/", (req, res) => {
       console.log(`[TRACKPAGE.JS - INICIANDO CONNECT.JS]`);
       const isSuccessful = await connectTrackpage({
         eventData: eventData,
-        eventType: "trackpage",
+        eventType: 'trackpage',
       });
-    if(!isSuccessful) throw new Error()
+      if (!isSuccessful) throw new Error();
       console.log(`[TRACKPAGE.JS - SUCESSO!]`);
       console.log(`-------------------------------------`);
     })();
   } catch (err) {
     console.error(
-      "[TRACKPAGE.JS - FALHOU] Erro inesperado no processamento:",
+      '[TRACKPAGE.JS - FALHOU] Erro inesperado no processamento:',
       err
     );
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 

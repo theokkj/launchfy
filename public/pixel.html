@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Launchfy Pixel</title>
+  </head>
+  <body>
+    <script>
+      window.addEventListener('message', (event) => {
+        console.log('[bridge] mensagem recebida de:', event.origin, event.data);
+
+        if (event.data.command === 'READ_BROWSER_ID') {
+          const browserId = localStorage.getItem('browser_Id');
+          console.log('[bridge] Enviando browserId:', browserId);
+          event.source.postMessage(
+            {
+              command: 'BROWSER_ID_RESPONSE',
+              browserId: browserId,
+            },
+            event.origin
+          );
+        }
+      });
+
+      // Garante que sempre tenha um browser_Id salvo
+      if (!localStorage.getItem('browser_Id')) {
+        const id = crypto.randomUUID();
+        console.log('[bridge] Criando novo browser_Id:', id);
+        localStorage.setItem('browser_Id', id);
+      }
+    </script>
+  </body>
+</html>
