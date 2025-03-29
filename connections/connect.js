@@ -90,26 +90,49 @@ function _findCurrentEventSchema({ eventType, eventSchemaId }) {
 
 function _connectEventDataToEventSchema(eventData, eventsSchemas) {
   console.log(`[CONNECT.JS - CONECTANDO EVENT DATA AO EVENT SCHEMA]`);
+
   const output = {};
-
-  // Percorre cada key principal do schema (eventData, profileData, etc.)
   for (const mainKey in eventsSchemas) {
-    // Cria um objeto interno caso não exista
-    output[mainKey] = {};
-
-    // Percorre cada propriedade interna do schema
-    for (const property in eventsSchemas[mainKey]) {
-      const inputKey = eventsSchemas[mainKey][property]; // chave do input que queremos
-      // Atribui o valor do input correspondente ao campo do schema
-      if (!!eventData[inputKey]) {
-        output[mainKey][property] = eventData[inputKey];
-      }
-    }
+    // Para cada bloco principal (e.g., "eventData", "profileData", etc.)
+    output[mainKey] = processSchema(eventData, eventsSchemas[mainKey]);
   }
 
   console.log(`[CONNECT.JS - EVENT SCHEMA DATA CRIADO]`);
-
   return output;
+}
+
+function processSchema(eventData, schemaPart) {
+  // Esta função percorre recursivamente as chaves do schema
+  // e devolve um objeto com os valores correspondentes de eventData
+  const result = {};
+
+  for (const key in schemaPart) {
+    const value = schemaPart[key];
+
+    if (typeof value === 'string') {
+      // Se for string, interpretamos como um "path" do tipo 'data.purchase.price.value'
+      const nestedValue = getNestedValue(eventData, value);
+      if (nestedValue !== undefined) {
+        result[key] = nestedValue;
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      // Se for objeto, chamamos a mesma função recursivamente
+      result[key] = processSchema(eventData, value);
+    }
+  }
+
+  return result;
+}
+
+function getNestedValue(obj, path) {
+  // Faz o split no ponto e percorre o objeto para achar o valor.
+  // Caso alguma parte não exista, ele retorna undefined.
+  return path
+    .split('.')
+    .reduce(
+      (acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined),
+      obj
+    );
 }
 
 function _findIdFields({ profileSchema, profileData }) {
@@ -623,8 +646,9 @@ async function connectWorkflow({ eventData, workflow }) {
       profileData: eventSchemaData.profileData,
     });
 
-    const { profiles: leadsProfiles, leadIds } =
-      await _getProfilesByIdFields(idFields);
+    const { profiles: leadsProfiles, leadIds } = await _getProfilesByIdFields(
+      idFields
+    );
 
     // Caso nenhum lead tenha sido encontrado
     if (leadIds.length == 0) {
